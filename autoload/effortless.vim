@@ -11,54 +11,67 @@ function! s:construct_command(msg) abort
   return res
 endfunction
 
+function! effortless#id() abort
+  let s = reltimestr(reltime())
+  let s = split(s, '\.')[0]
+  return printf('#el%s', s)
+endfunction
+
 let s:timer = {
-    \ 'id': -1,
-    \ 'title': '',
-    \ 'minutes': -1,
-    \ 'rest_sec': -1,
-    \ 'paused': v:false,
-    \ }
+      \ 'id': '',
+      \ 'bufnr': -1,
+      \ 'timer': -1,
+      \ 'title': '',
+      \ 'minutes': -1,
+      \ 'rest_sec': -1,
+      \ 'paused': v:false,
+      \ }
 
 function! s:timer.is_paused() abort
-  if self.id < 0 | return v:false | endif
+  if self.timer < 0 | return v:false | endif
   return self.paused
 endfunction
 
 function! s:timer.pause() abort
-  if self.id < 0 | return v:false | endif
-  call timer_stop(self.id)
+  if self.timer < 0 | return v:false | endif
+  call timer_stop(self.timer)
   let self.paused = v:true
   return v:true
 endfunction
 
 function! s:timer.restart() abort
-  if self.id < 0 | return v:false | endif
-  let self.id = timer_start(1000, {_ -> self.count_down()}, {'repeat': -1})
+  if self.timer < 0 | return v:false | endif
+  let self.timer = timer_start(1000, {_ -> self.count_down()}, {'repeat': -1})
   echom printf('Restart timer: %s (%d min)', self.title, self.minutes)
   let self.paused = v:false
   return v:true
 endfunction
 
 function! s:timer.stop() abort
-  if self.id < 0 | return v:false | endif
-  call timer_stop(self.id)
-  let self.id = -1
+  if self.timer < 0 | return v:false | endif
+  call timer_stop(self.timer)
+  let self.id = ''
+  let self.timer = -1
   let self.paused = v:false
   return v:true
 endfunction
 
-function! s:timer.start(title, minutes) abort
-  let sec = a:minutes * 60
-  let self.title = a:title
-  let self.minutes = a:minutes
+function! s:timer.start(args, bufnr) abort
+  "let sec = a:args['minutes'] * 60
+  let sec = a:args['minutes']
+  let self.id = a:args['id']
+  let self.bufnr = a:bufnr
+  let self.title = a:args['title']
+  let self.minutes = a:args['minutes']
   let self.rest_sec = sec
   let self.paused = v:false
-  let self.id = timer_start(1000, {_ -> self.count_down()}, {'repeat': -1})
-  echom printf('Start timer: %s (%d min)', a:title, a:minutes)
+  let self.timer = timer_start(1000, {_ -> self.count_down()}, {'repeat': -1})
+  echom printf('Start timer: %s (%d min)', a:args['title'], a:args['minutes'])
 endfunction
 
 function! s:timer.count_down() abort
   if self.rest_sec < 1
+    call effortless#done_by_id(self.id, self.bufnr)
     call self.stop()
     let msg = printf('Finish timer: %s', self.title)
     echom msg
@@ -70,35 +83,78 @@ function! s:timer.count_down() abort
   endif
 endfunction
 
-function! s:parse_current_line() abort
-  let line = trim(getline('.'))
+function! effortless#done_by_id(id, bufnr) abort
+  let lines = getbufline(a:bufnr, 1, '$')
+  for i in range(0, len(lines))
+    let res = effortless#parse(lines[i])
+    if !has_key(res, 'id') || res.id !=# a:id
+      continue
+    endif
+
+    call setbufline(a:bufnr, i+1, printf('# %s', lines[i]))
+    break
+  endfor
+endfunction
+
+function! effortless#toggle() abort
+  let line = getline('.')
+  if stridx(line, '#') == 0
+    call setline('.', trim(line[1:]))
+  else
+    call setline('.', printf('# %s', line))
+  endif
+endfunction
+
+function! effortless#parse(line) abort
+  let line = trim(a:line)
   if stridx(line, '#') == 0 | return {} | endif
   let index = match(line, '\s\+[0-9]\+$')
   if index == -1 | return {} | endif
-  return {
-       \ 'title': trim(line[0:index]),
-       \ 'minutes': str2nr(trim(line[index:])),
-       \ }
+
+  let title = trim(line[0:index])
+  let minutes = str2nr(trim(line[index:]))
+
+  let index = match(title, '\s\+#el[0-9]\+$')
+  let id = ''
+  if index != -1
+    let id = trim(title[index:])
+    let title = trim(title[0:index])
+  endif
+
+  return {'title': title, 'minutes': minutes, 'id': id}
 endfunction
 
-function! effortless#check() abort
-  if s:timer.id >= 0 | return | endif
-  let res = s:parse_current_line()
-
-  if has_key(res, 'title') && has_key(res, 'minutes')
-    call s:timer.start(res.title, res.minutes)
+function! effortless#start(line, force) abort
+  if !a:force && s:timer.timer >= 0
+    return v:false
   endif
+
+  let res = effortless#parse(a:line)
+  if empty(res) | return v:false | endif
+
+  if empty(res.id)
+    let res.id = effortless#id()
+    call setline('.', printf('%s %s %d', res.title, res.id, res.minutes))
+  endif
+
+  call s:timer.stop()
+  call s:timer.start(res, bufnr('%'))
 endfunction
 
-function! effortless#start() abort
-  if s:timer.is_paused()
-    return s:timer.restart()
-  endif
-  let res = s:parse_current_line()
-  if has_key(res, 'title') && has_key(res, 'minutes')
-    call s:timer.stop()
-    call s:timer.start(res.title, res.minutes)
-  endif
+function! effortless#check_current_line() abort
+  call effortless#start(getline('.'), v:false)
+endfunction
+
+function! effortless#check_first_line() abort
+  for line in getline(1, '$')
+    if stridx(line, '#') == 0 | continue | endif
+    call effortless#start(line, v:false)
+    break
+  endfor
+endfunction
+
+function! effortless#start_by_current_line() abort
+  call effortless#start(getline('.'), v:true)
 endfunction
 
 function! effortless#stop() abort
@@ -118,7 +174,7 @@ function! effortless#pause() abort
 endfunction
 
 function! effortless#status() abort
-  if s:timer.id < 0
+  if s:timer.timer < 0
     return 'None'
   endif
   let sec = s:timer.rest_sec
