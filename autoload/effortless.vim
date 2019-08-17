@@ -72,6 +72,7 @@ endfunction
 
 function! s:parse_current_line() abort
   let line = trim(getline('.'))
+  if stridx(line, '#') == 0 | return {} | endif
   let index = match(line, '\s\+[0-9]\+$')
   if index == -1 | return {} | endif
   return {
