@@ -1,9 +1,9 @@
 """ Time
-syn match   elTime '[0-9]\+$'
+syn match   elTime '\s\+[0-9]\+$'
 hi def link elTime Number
 
 """ id
-syn match   elId '#el[0-9]\+'
+syn match   elId '\s\+#el[0-9]\+'
 hi def link elId Identifier
 
 """ Comment
