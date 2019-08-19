@@ -1,10 +1,17 @@
 # vim-textimer
 
-[Efforless](https://www.textimer.app) inspired vim plugin.
+Text based timer vim plugin heaviliy inspired by [Efforless](https://www.textimer.app).
+
+![Screen shot](screenshot.png)
+
+## Try online demo
+
+ * [Demo](https://rhysd.github.io/vim.wasm/?arg=%2Fsample.textimer&dir=%2Fusr%2Flocal%2Fshare%2Fvim%2Fftdetect&file=%2Fsample.textimer%3Dhttps%3A%2F%2Fraw.githubusercontent.com%2Fliquidz%2Fvim-textimer%2Fmaster%2Fsample.textimer&file=%2Fusr%2Flocal%2Fshare%2Fvim%2Fautoload%2Ftextimer.vim%3Dhttps%3A%2F%2Fraw.githubusercontent.com%2Fliquidz%2Fvim-textimer%2Fmaster%2Fautoload%2Ftextimer.vim&file=%2Fusr%2Flocal%2Fshare%2Fvim%2Fftdetect%2Ftextimer.vim%3Dhttps%3A%2F%2Fraw.githubusercontent.com%2Fliquidz%2Fvim-textimer%2Fmaster%2Fftdetect%2Ftextimer.vim&file=%2Fusr%2Flocal%2Fshare%2Fvim%2Fftplugin%2Ftextimer.vim%3Dhttps%3A%2F%2Fraw.githubusercontent.com%2Fliquidz%2Fvim-textimer%2Fmaster%2Fftplugin%2Ftextimer.vim&file=%2Fusr%2Flocal%2Fshare%2Fvim%2Fsyntax%2Ftextimer.vim%3Dhttps%3A%2F%2Fraw.githubusercontent.com%2Fliquidz%2Fvim-textimer%2Fmaster%2Fsyntax%2Ftextimer.vim%) powered by [rhysd/vim.wasm](https://github.com/rhysd/vim.wasm).
+   * Please access from desktop Chrome, Firefox, Safari or Chromium based browsers
 
 ## Requirements
 
- * [`+timer`](https://vim-jp.org/vimdoc-en/various.html#+timers)
+ * Vim8.1 with [`+timer`](https://vim-jp.org/vimdoc-en/various.html#+timers) and [popup](https://vim-jp.org/vimdoc-en/popup.html).
 
 ## Installation
 
@@ -23,7 +30,8 @@ Plug 'liquidz/vim-textimer'
      * vim-textimer will start timer by
        * [CursorHoldI](https://vim-jp.org/vimdoc-en/autocmd.html#CursorHoldI) auto command.
          * depends on [updatetime](https://vim-jp.org/vimdoc-en/options.html#'updatetime') option.
-       * `:textimerStart` command.
+       * Type `<CR><CR>` in normal mode, and open textimer menu.
+       * `:TextimerStart` command.
 
  * When timer is finished, vim-textimer echos the message.
    * If `g:textimer#finished_command` is defined, specified command will be executed.
