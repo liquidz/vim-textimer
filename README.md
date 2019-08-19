@@ -1,6 +1,6 @@
-# vim-effortless
+# vim-textimer
 
-[Efforless](https://www.effortless.app) inspired vim plugin.
+[Efforless](https://www.textimer.app) inspired vim plugin.
 
 ## Requirements
 
@@ -10,27 +10,27 @@
 
  * vim-plug
 ```
-Plug 'liquidz/vim-effortless'
+Plug 'liquidz/vim-textimer'
 ```
 
 ## Usage
 
- * Open `*.effortless` file
-   * e.g. `$ vim your_project.effortless`
+ * Open `*.textimer` file
+   * e.g. `$ vim your_project.textimer`
  * Write text something like:
    * `First Task 30`
      * the last word `30` means `30 minutes`
-     * vim-effortless will start timer by
+     * vim-textimer will start timer by
        * [CursorHoldI](https://vim-jp.org/vimdoc-en/autocmd.html#CursorHoldI) auto command.
          * depends on [updatetime](https://vim-jp.org/vimdoc-en/options.html#'updatetime') option.
-       * `:EffortlessStart` command.
+       * `:textimerStart` command.
 
- * When timer is finished, vim-effortless echos the message.
-   * If `g:effortless#finished_command` is defined, specified command will be executed.
+ * When timer is finished, vim-textimer echos the message.
+   * If `g:textimer#finished_command` is defined, specified command will be executed.
      * e.g. To notify on macOS
 ```
-let g:effortless#finished_command = 'osascript'
-let g:effortless#finished_exec = '%c -e ''display notification "effortless" with title "%s"'''
+let g:textimer#finished_command = 'osascript'
+let g:textimer#finished_exec = '%c -e ''display notification "textimer" with title "%s"'''
 ```
 
 ## License
