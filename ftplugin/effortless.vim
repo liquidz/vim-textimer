@@ -9,6 +9,7 @@ set cpoptions&vim
 aug effortless
   au!
   au CursorHoldI *.effortless call effortless#check_current_line()
+  au VimResized *.effortless call effortless#move_popup()
 aug END
 
 command! EffortlessStart  call effortless#start_by_current_line()

@@ -293,5 +293,17 @@ function! effortless#menu() abort
         \ 'callback': function('s:menu_selected', [items])})
 endfunction
 
+function! effortless#move_popup() abort
+  if s:timer.winid < 0 | return | endif
+  let wininfo = getwininfo(win_getid())[0]
+
+  let height = g:effortless#popup_height
+  let width = g:effortless#popup_width
+  call popup_move(s:timer.winid, {
+       \   'line': wininfo['height'] - height,
+       \   'col': wininfo['width'] - width - 4,
+       \ })
+endfunction
+
 let &cpoptions = s:save_cpo
 unlet s:save_cpo
