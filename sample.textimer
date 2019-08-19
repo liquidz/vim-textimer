@@ -1,0 +1,11 @@
+# Sample file for vim-textimer
+# https://github.com/liquidz/vim-textimer
+
+# Type <CR><CR> in normal mode to open menu.
+# Last number means minutes to count.
+Drink coffee 5
+
+# ID like '#el1566207201' is injected automatically.
+Write vim plugin #el1566207201 30
+
+# Doned task 15
