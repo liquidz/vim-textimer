@@ -5,6 +5,7 @@ let g:effortless#finished_command = get(g:, 'effortless#finished_command', '')
 let g:effortless#finished_exec = get(g:, 'effortless#finished_exec', '%c %s')
 let g:effortless#popup_height = get(g:, 'effortless#popup_height', 3)
 let g:effortless#popup_width = get(g:, 'effortless#popup_width', 30)
+let g:effortless#popup_borderchars = get(g:, 'effortless#popup_borderchars', ['-', '|', '-', '|', '+', '+', '+', '+'])
 
 function! s:border() abort
   return repeat('-', g:effortless#popup_width)
@@ -89,12 +90,14 @@ function! s:timer.start(args, bufnr) abort
         \   self.rest_time_str(),
         \ ], {
         \   'line': wininfo['height'] - height,
-        \   'col': wininfo['width'] - width,
+        \   'col': wininfo['width'] - width - 4,
         \   'minheight': height,
         \   'maxheight': height,
         \   'minwidth': width,
         \   'maxwidth': width,
         \   'border': [],
+        \   'borderchars': g:effortless#popup_borderchars,
+        \   'padding': [0, 1, 0, 1],
         \ })
   echom printf('Start timer: %s (%d min)', a:args['title'], a:args['minutes'])
 endfunction
@@ -290,6 +293,8 @@ function! effortless#menu() abort
   call filter(items, {_, v -> !empty(v)})
   call popup_menu(items, {
         \ 'title': 'vim-effortless',
+        \ 'borderchars': g:effortless#popup_borderchars,
+        \ 'padding': [0, 1, 0, 1],
         \ 'callback': function('s:menu_selected', [items])})
 endfunction
 
