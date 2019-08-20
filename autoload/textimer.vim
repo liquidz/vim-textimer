@@ -83,6 +83,11 @@ function! s:timer.start(args, bufnr) abort
   let self.timer = timer_start(1000, {_ -> self.count_down()}, {'repeat': -1})
 
   if self.winid >= 0 | call popup_close(self.winid) | endif
+
+  let title_len = len(a:args['title'])
+  let height = (title_len > width)
+        \ ? height + (title_len / width)
+        \ : height
   let self.winid = popup_create(
         \ [
         \   a:args['title'],
