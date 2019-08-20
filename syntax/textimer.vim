@@ -7,7 +7,7 @@ syn match   ttId '\s\+#tt[0-9]\+'
 hi def link ttId Identifier
 
 """ Comment
-syn match   ttComment '^#.*'
+syn match   ttComment '^\s*#.*'
 hi def link ttComment Comment
 
 let b:current_syntax = 'textimer'
