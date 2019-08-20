@@ -130,7 +130,7 @@ endfunction
 function! textimer#id() abort
   let s = reltimestr(reltime())
   let s = split(s, '\.')[0]
-  return printf('#el%s', s)
+  return printf('#tt%s', s)
 endfunction
 
 function! textimer#done_by_id(id, bufnr) abort
@@ -168,7 +168,7 @@ function! textimer#parse(line) abort
   let title = trim(line[0:index])
   let minutes = str2nr(trim(line[index:]))
 
-  let index = match(title, '\s\+#el[0-9]\+$')
+  let index = match(title, '\s\+#tt[0-9]\+$')
   let id = ''
   if index != -1
     let id = trim(title[index:])
