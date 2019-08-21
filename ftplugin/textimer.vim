@@ -6,9 +6,10 @@ let g:loaded_textimer = 1
 let s:save_cpo = &cpoptions
 set cpoptions&vim
 
+setl iskeyword=@,48-57,_,192-255,#
+
 aug textimer
   au!
-  au CursorHoldI *.textimer call textimer#check_current_line()
   au VimResized *.textimer call textimer#move_popup()
 aug END
 
@@ -24,6 +25,8 @@ nnoremap <silent> <Plug>(textimer_menu)  :<C-u>TextimerMenu<CR>
 if !hasmapto('<Plug>(textimer_menu)')
   silent! nmap <buffer> <CR><CR> <Plug>(textimer_menu)
 endif
+
+sign define textimer_sign text=>> texthl=Todo
 
 let &cpoptions = s:save_cpo
 unlet s:save_cpo

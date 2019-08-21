@@ -11,117 +11,80 @@ function! s:border() abort
   return repeat('-', g:textimer#popup_width)
 endfunction
 
-" s:timer {{{
+""" count down timer {{{
 let s:timer = {
-      \ 'id': '',
-      \ 'bufnr': -1,
       \ 'timer': -1,
-      \ 'title': '',
-      \ 'minutes': -1,
       \ 'rest_sec': -1,
-      \ 'paused': v:false,
-      \ 'winid': -1,
+      \ 'callback': '',
+      \ 'context': {},
       \ }
 
-function! s:timer.is_paused() abort
-  if self.timer < 0 | return v:false | endif
-  return self.paused
-endfunction
-
-function! s:timer.rest_time_str() abort
-  if self.timer < 0 | return '' | endif
-  let sec = s:timer.rest_sec
-  return printf('%02d:%02d', sec / 60, sec % 60)
-endfunction
-
-function! s:timer.pause() abort
-  if self.timer < 0 | return v:false | endif
-  call timer_stop(self.timer)
-  let self.paused = v:true
-
-  if self.winid >= 0
-    call popup_settext(self.winid, [
-          \ self.title,
-          \ s:border(),
-          \ printf('Paused(%s)', self.rest_time_str())
-          \ ])
-  endif
-  return v:true
-endfunction
-
-function! s:timer.restart() abort
-  if self.timer < 0 | return v:false | endif
+function! s:timer.only_start() abort
   let self.timer = timer_start(1000, {_ -> self.count_down()}, {'repeat': -1})
-  echom printf('Restart timer: %s (%d min)', self.title, self.minutes)
-  let self.paused = v:false
   return v:true
 endfunction
 
-function! s:timer.stop() abort
-  if self.timer < 0 | return v:false | endif
-  call timer_stop(self.timer)
-  if self.winid >= 0 | call popup_close(self.winid) | endif
-  let self.id = ''
-  let self.timer = -1
-  let self.paused = v:false
-  let self.winid = -1
+function! s:timer.start(time_sec, callback, ...) abort
+  let self.rest_sec = a:time_sec
+  let self.callback = a:callback
+  let self.context = get(a:, 1, {})
+  call self.only_start()
   return v:true
-endfunction
-
-function! s:timer.start(args, bufnr) abort
-  let sec = a:args['minutes'] * 60
-  let wininfo = getwininfo(win_getid())[0]
-  let height = g:textimer#popup_height
-  let width = g:textimer#popup_width
-
-  let self.id = a:args['id']
-  let self.bufnr = a:bufnr
-  let self.title = a:args['title']
-  let self.minutes = a:args['minutes']
-  let self.rest_sec = sec
-  let self.paused = v:false
-  let self.timer = timer_start(1000, {_ -> self.count_down()}, {'repeat': -1})
-
-  if self.winid >= 0 | call popup_close(self.winid) | endif
-
-  let title_len = len(a:args['title'])
-  let height = (title_len > width)
-        \ ? height + (title_len / width)
-        \ : height
-  let self.winid = popup_create(
-        \ [
-        \   a:args['title'],
-        \   s:border(),
-        \   self.rest_time_str(),
-        \ ], {
-        \   'line': wininfo['height'] - height,
-        \   'col': wininfo['width'] - width - 4,
-        \   'minheight': height,
-        \   'maxheight': height,
-        \   'minwidth': width,
-        \   'maxwidth': width,
-        \   'border': [],
-        \   'borderchars': g:textimer#popup_borderchars,
-        \   'padding': [0, 1, 0, 1],
-        \ })
-  echom printf('Start timer: %s (%d min)', a:args['title'], a:args['minutes'])
 endfunction
 
 function! s:timer.count_down() abort
   if self.rest_sec < 1
-    call textimer#done_by_id(self.id, self.bufnr)
     call self.stop()
-    let msg = printf('Finish timer: %s', self.title)
-    echom msg
-    if !empty(g:textimer#finished_command)
-      silent call system(s:construct_command(msg))
+    if type(self.callback) == v:t_func
+      call self.callback({'type': 'finish', 'context': self.context})
     endif
   else
     let self.rest_sec = self.rest_sec - 1
-    if self.winid >= 0
-      call popup_settext(self.winid, [self.title, s:border(), self.rest_time_str()])
+    if type(self.callback) == v:t_func
+      call self.callback({'type': 'count_down', 'rest_sec': self.rest_sec, 'context': self.context})
     endif
   endif
+endfunction
+
+function! s:timer.stop() abort
+  if !self.is_stoppable() | return v:false | endif
+  call timer_stop(self.timer)
+  if type(self.callback) == v:t_func
+    call self.callback({'type': 'stop', 'context': self.context})
+  endif
+
+  let self.timer = -1
+  let self.rest_sec = -1
+  let self.callback = ''
+  let self.context = {}
+  return v:true
+endfunction
+
+function! s:timer.pause() abort
+  if !self.is_active() | return v:false | endif
+  call timer_stop(self.timer)
+  if type(self.callback) == v:t_func
+    call self.callback({'type': 'pause', 'rest_sec': self.rest_sec, 'context': self.context})
+  endif
+
+  let self.timer = -1
+  return v:true
+endfunction
+
+function! s:timer.is_active() abort
+  return (self.timer >= 0)
+endfunction
+
+function! s:timer.is_paused() abort
+  return (self.timer < 0 && self.rest_sec > 0)
+endfunction
+
+function! s:timer.is_stoppable() abort
+  return (self.is_active() || self.is_paused())
+endfunction
+
+function! s:timer.context_get(key, default) abort
+  return get(self.context, a:key, a:default)
 endfunction
 " }}}
 
@@ -138,17 +101,34 @@ function! textimer#id() abort
   return printf('#tt%s', s)
 endfunction
 
-function! textimer#done_by_id(id, bufnr) abort
+function! s:get_line_info_by_id(id, bufnr) abort
   let lines = getbufline(a:bufnr, 1, '$')
   for i in range(0, len(lines))
     let res = textimer#parse(lines[i])
-    if !has_key(res, 'id') || res.id !=# a:id
-      continue
+    if has_key(res, 'id') && res.id ==# a:id
+      return [i, lines[i]]
     endif
-
-    call setbufline(a:bufnr, i+1, printf('# %s', lines[i]))
-    break
   endfor
+
+  return [-1, '']
+endfunction
+
+function! textimer#done_by_id(id, bufnr) abort
+  let [lnum, line] = s:get_line_info_by_id(a:id, a:bufnr)
+  if lnum == -1 | return | endif
+  call setbufline(a:bufnr, lnum+1, printf('# %s', line))
+endfunction
+
+let s:last_sign_id = -1
+function! s:place_sign_by_id(id, bufnr) abort
+  let [lnum, _] = s:get_line_info_by_id(a:id, a:bufnr)
+  if lnum == -1 | return | endif
+
+  if s:last_sign_id > 0
+    call sign_unplace('', {'buffer': a:bufnr, 'id': s:last_sign_id})
+  endif
+
+  let s:last_sign_id = sign_place(0, '', 'textimer_sign', a:bufnr, {'lnum': lnum+1})
 endfunction
 
 function! textimer#toggle() abort
@@ -157,7 +137,7 @@ function! textimer#toggle() abort
     call setline('.', trim(line[1:]))
   else
     let res = textimer#parse(line)
-    if s:timer.timer >= 0 && !empty(res) && res.id ==# s:timer.id
+    if !empty(res) && s:timer.is_stoppable() && res.id ==# s:timer.context_get('id', '')
       call s:timer.stop()
     endif
     call setline('.', printf('# %s', line))
@@ -183,74 +163,112 @@ function! textimer#parse(line) abort
   return {'title': title, 'minutes': minutes, 'id': id}
 endfunction
 
-function! textimer#start(line, force) abort
-  if !a:force && s:timer.timer >= 0
-    return v:false
-  endif
+function! s:format_time(sec) abort
+  return printf('%02d:%02d', a:sec / 60, a:sec % 60)
+endfunction
 
-  let res = textimer#parse(a:line)
+function! s:timer_callback(event) abort
+  let type = get(a:event, 'type', '')
+  let sec = get(a:event, 'rest_sec', -1)
+  let ctx = get(a:event, 'context', {})
+  let winid = get(ctx, 'popup', -1)
+
+  if type ==# 'count_down'
+    if winid >= 0 && sec >= 0
+      call popup_settext(winid, [ctx.title, s:border(), s:format_time(sec)])
+    endif
+
+  elseif type ==# 'stop'
+    call popup_close(winid)
+
+  elseif type ==# 'pause'
+    call popup_settext(winid, [
+          \ ctx.title,
+          \ s:border(),
+          \ printf('Paused(%s)', s:format_time(sec))
+          \ ])
+
+  elseif type ==# 'finish'
+    call textimer#done_by_id(ctx.id, ctx.bufnr)
+    call popup_close(winid)
+
+  endif
+endfunction
+
+function! s:open_popup(title, sec) abort
+  let wininfo = getwininfo(win_getid())[0]
+  let height = g:textimer#popup_height
+  let width = g:textimer#popup_width
+
+  let title_len = len(a:title)
+  let height = (title_len > width)
+        \ ? height + (title_len / width)
+        \ : height
+  return popup_create(
+        \ [
+        \   a:title,
+        \   s:border(),
+        \   s:format_time(a:sec),
+        \ ], {
+        \   'line': wininfo['height'] - height,
+        \   'col': wininfo['width'] - width - 4,
+        \   'minheight': height,
+        \   'maxheight': height,
+        \   'minwidth': width,
+        \   'maxwidth': width,
+        \   'border': [],
+        \   'borderchars': g:textimer#popup_borderchars,
+        \   'padding': [0, 1, 0, 1],
+        \ })
+endfunction
+
+function! textimer#start(line_number) abort
+  let line_number = (type(a:line_number) == v:t_number)
+        \ ? a:line_number
+        \ : line(a:line_number)
+  let line = getline(line_number)
+  let res = textimer#parse(line)
   if empty(res) | return v:false | endif
 
-  if empty(res.id)
+  if empty(res.id) || searchpos(res.id, 'bnW') != [0, 0]
     let res.id = textimer#id()
     call setline('.', printf('%s %s %d', res.title, res.id, res.minutes))
   endif
 
+  let sec = res.minutes * 60
+  let context = {
+        \ 'id': res.id,
+        \ 'title': res.title,
+        \ 'bufnr': bufnr('%'),
+        \ 'popup': s:open_popup(res.title, sec),
+        \ }
   call s:timer.stop()
-  call s:timer.start(res, bufnr('%'))
-endfunction
-
-function! textimer#check_current_line() abort
-  call textimer#start(getline('.'), v:false)
-endfunction
-
-function! textimer#check_first_line() abort
-  for line in getline(1, '$')
-    if stridx(line, '#') == 0 | continue | endif
-    call textimer#start(line, v:false)
-    break
-  endfor
+  call s:timer.start(sec, funcref('s:timer_callback'), context)
 endfunction
 
 function! textimer#start_by_current_line() abort
-  call textimer#start(getline('.'), v:true)
+  call textimer#start('.')
 endfunction
 
 function! textimer#stop() abort
-  if s:timer.stop()
-    echom printf('Stopped timer: %s', s:timer.title)
-    return
+  if !s:timer.stop()
+    echom 'No timer'
   endif
-  echom 'No timer'
 endfunction
 
 function! textimer#pause() abort
-  if s:timer.pause()
-    echom printf('Paused timer: %s', s:timer.title)
-    return
+  if !s:timer.pause()
+    echom 'No timer'
   endif
-  echom 'No timer'
 endfunction
 
 function! textimer#restart() abort
-  if s:timer.restart()
-    echom printf('Restart timer: %s', s:timer.title)
+  if !s:timer.is_paused()
+    echom 'No paused timer'
     return
   endif
-  echom 'No timer'
-endfunction
 
-function! textimer#status() abort
-  if s:timer.timer < 0
-    return 'None'
-  endif
-  let sec = s:timer.rest_sec
-  let rest = printf('%02d:%02d', sec / 60, sec % 60)
-
-  if s:timer.paused
-    return printf('Paused(%s)', rest)
-  endif
-  return printf('%s(%s)', s:timer.title, rest)
+  call s:timer.only_start()
 endfunction
 
 function! s:menu_selected(menu_items, x, menu_index) abort
@@ -273,24 +291,27 @@ endfunction
 
 function! textimer#menu() abort
   let res = textimer#parse(getline('.'))
-  if empty(res)
-    return
-  endif
+  if empty(res) | return | endif
+
+  let is_active = s:timer.is_active()
+  let is_paused = s:timer.is_paused()
+  let is_stoppable = s:timer.is_stoppable()
+  let ctx_id = s:timer.context_get('id', '')
+  let ctx_title = s:timer.context_get('title', '')
+  let ctx_rest_sec = s:timer.context_get('rest_sec', -1)
+  let ctx_rest_min = ctx_rest_sec / 60
 
   let start_item = printf('Start   "%s" %dm', res.title, res.minutes)
-  let stop_item = s:timer.timer < 0 ? ''
-        \ : printf('Stop    "%s" %dm', s:timer.title, s:timer.rest_sec / 60)
+  let stop_item = is_stoppable ? printf('Stop    "%s" %dm', ctx_title, ctx_rest_min) : ''
   let done_item = printf('Done    "%s"', res.title)
 
   let items = []
-  if s:timer.timer >= 0 && s:timer.id ==# res.id
-    if s:timer.is_paused()
-      let restart_item = printf('Restart "%s" %dm', s:timer.title, s:timer.rest_sec / 60)
-      let items = [restart_item, stop_item, done_item]
-    else
-      let pause_item = printf('Pause   "%s" %dm', s:timer.title, s:timer.rest_sec / 60)
-      let items = [pause_item, stop_item, done_item]
-    endif
+  if is_active && ctx_id ==# res.id
+    let pause_item = printf('Pause   "%s" %dm', ctx_title, ctx_rest_min)
+    let items = [pause_item, stop_item, done_item]
+  elseif is_paused && ctx_id ==# res.id
+    let restart_item = printf('Restart "%s" %dm', ctx_title, ctx_rest_min)
+    let items = [restart_item, stop_item, done_item]
   else
     let items = [start_item, stop_item, done_item]
   endif
@@ -304,12 +325,13 @@ function! textimer#menu() abort
 endfunction
 
 function! textimer#move_popup() abort
-  if s:timer.winid < 0 | return | endif
-  let wininfo = getwininfo(win_getid())[0]
+  let winid = s:timer.context_get('popup', -1)
+  if winid < 0 | return | endif
 
+  let wininfo = getwininfo(win_getid())[0]
   let height = g:textimer#popup_height
   let width = g:textimer#popup_width
-  call popup_move(s:timer.winid, {
+  call popup_move(winid, {
        \   'line': wininfo['height'] - height,
        \   'col': wininfo['width'] - width - 4,
        \ })
