@@ -6,6 +6,7 @@ let g:textimer#finished_exec = get(g:, 'textimer#finished_exec', '%c %s')
 let g:textimer#popup_height = get(g:, 'textimer#popup_height', 3)
 let g:textimer#popup_width = get(g:, 'textimer#popup_width', 30)
 let g:textimer#popup_borderchars = get(g:, 'textimer#popup_borderchars', ['-', '|', '-', '|', '+', '+', '+', '+'])
+let g:textimer#new_timer_minutes = get(g:, 'textimer#new_timer_minutes', [5, 15, 25])
 
 function! s:border() abort
   return repeat('-', g:textimer#popup_width)
@@ -34,10 +35,12 @@ endfunction
 
 function! s:timer.count_down() abort
   if self.rest_sec < 1
-    call self.stop()
     if type(self.callback) == v:t_func
       call self.callback({'type': 'finish', 'context': self.context})
+      " reset callback to prevent callbacking in 'stop'
+      let self.callback = ''
     endif
+    call self.stop()
   else
     let self.rest_sec = self.rest_sec - 1
     if type(self.callback) == v:t_func
@@ -271,27 +274,37 @@ function! textimer#restart() abort
   call s:timer.only_start()
 endfunction
 
-function! s:menu_selected(menu_items, x, menu_index) abort
+function! textimer#new(arg) abort
+  let min = str2nr(trim(a:arg, 'm'))
+  let line = getline('.')
+  call setline('.', printf('%s %d', trim(line), min))
+  call textimer#start_by_current_line()
+endfunction
+
+function! s:menu_selected(menu_items, _, menu_index) abort
   if a:menu_index < 0 | return | endif
   let item = a:menu_items[a:menu_index-1]
-  let item = split(item, '\s\+')[0]
+  let item = split(item, '\s\+')
+  let item_name = item[0]
 
-  if item ==# 'Start'
+  if item_name ==# 'Start'
     call textimer#start_by_current_line()
-  elseif item ==# 'Stop'
+  elseif item_name ==# 'Stop'
     call textimer#stop()
-  elseif item ==# 'Pause'
+  elseif item_name ==# 'Pause'
     call textimer#pause()
-  elseif item ==# 'Restart'
+  elseif item_name ==# 'Restart'
     call textimer#restart()
-  elseif item ==# 'Done'
+  elseif item_name ==# 'Done'
     call textimer#toggle()
+  elseif item_name ==# 'New' && len(item) == 2
+    call textimer#new(item[1])
   endif
 endfunction
 
 function! textimer#menu() abort
-  let res = textimer#parse(getline('.'))
-  if empty(res) | return | endif
+  let line = getline('.')
+  let res = textimer#parse(line)
 
   let is_active = s:timer.is_active()
   let is_paused = s:timer.is_paused()
@@ -301,19 +314,25 @@ function! textimer#menu() abort
   let ctx_rest_sec = s:timer.context_get('rest_sec', -1)
   let ctx_rest_min = ctx_rest_sec / 60
 
-  let start_item = printf('Start   "%s" %dm', res.title, res.minutes)
-  let stop_item = is_stoppable ? printf('Stop    "%s" %dm', ctx_title, ctx_rest_min) : ''
-  let done_item = printf('Done    "%s"', res.title)
-
   let items = []
-  if is_active && ctx_id ==# res.id
-    let pause_item = printf('Pause   "%s" %dm', ctx_title, ctx_rest_min)
-    let items = [pause_item, stop_item, done_item]
-  elseif is_paused && ctx_id ==# res.id
-    let restart_item = printf('Restart "%s" %dm', ctx_title, ctx_rest_min)
-    let items = [restart_item, stop_item, done_item]
+  let stop_item = is_stoppable ? printf('Stop    "%s" %dm', ctx_title, ctx_rest_min) : ''
+
+  if empty(res)
+    let items = [stop_item]
+    call extend(items, map(copy(g:textimer#new_timer_minutes), {_, v -> printf('New     %dm', v)}))
   else
-    let items = [start_item, stop_item, done_item]
+    let start_item = printf('Start   "%s" %dm', res.title, res.minutes)
+    let done_item = printf('Done    "%s"', res.title)
+
+    if is_active && ctx_id ==# res.id
+      let pause_item = printf('Pause   "%s" %dm', ctx_title, ctx_rest_min)
+      let items = [pause_item, stop_item, done_item]
+    elseif is_paused && ctx_id ==# res.id
+      let restart_item = printf('Restart "%s" %dm', ctx_title, ctx_rest_min)
+      let items = [restart_item, stop_item, done_item]
+    else
+      let items = [start_item, stop_item, done_item]
+    endif
   endif
 
   call filter(items, {_, v -> !empty(v)})
