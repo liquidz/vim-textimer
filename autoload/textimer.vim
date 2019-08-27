@@ -195,6 +195,10 @@ function! s:timer_callback(event) abort
     call textimer#done_by_id(ctx.id, ctx.bufnr)
     call popup_close(winid)
 
+    let msg = printf('Finish timer: %s', ctx.title)
+    if !empty(g:textimer#finished_command)
+      silent call system(s:construct_command(msg))
+    endif
   endif
 endfunction
 
