@@ -5,7 +5,9 @@
 # Last number means minutes to count.
 Drink coffee 5
 
-# ID like '#el1566207201' is injected automatically.
+# ID like '#tt1566207201' is concealed/injected automatically.
 Write vim plugin #tt1566207201 30
+    memo1
+        memo2
 
-# Doned task 15
+#DONE Finished task #tt1566957780 15

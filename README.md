@@ -12,6 +12,7 @@ Text based timer vim plugin heaviliy inspired by [Efforless](https://www.textime
 ## Requirements
 
  * Vim8.1 with [`+timer`](https://vim-jp.org/vimdoc-en/various.html#+timers) and [popup](https://vim-jp.org/vimdoc-en/popup.html).
+   * Neovim is not supported currently.
 
 ## Installation
 
