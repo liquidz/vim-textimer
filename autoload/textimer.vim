@@ -119,7 +119,7 @@ endfunction
 function! textimer#done_by_id(id, bufnr) abort
   let [lnum, line] = s:get_line_info_by_id(a:id, a:bufnr)
   if lnum == -1 | return | endif
-  call setbufline(a:bufnr, lnum+1, printf('# %s', line))
+  call setbufline(a:bufnr, lnum+1, printf('#DONE %s', line))
 endfunction
 
 let s:last_sign_id = -1
@@ -143,7 +143,7 @@ function! textimer#toggle() abort
     if !empty(res) && s:timer.is_stoppable() && res.id ==# s:timer.context_get('id', '')
       call s:timer.stop()
     endif
-    call setline('.', printf('# %s', line))
+    call setline('.', printf('#DONE %s', line))
   endif
 endfunction
 
