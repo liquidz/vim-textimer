@@ -7,6 +7,7 @@ let s:save_cpo = &cpoptions
 set cpoptions&vim
 
 setl iskeyword=@,48-57,_,192-255,#
+setl conceallevel=2
 
 aug textimer
   au!
