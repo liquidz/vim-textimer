@@ -6,7 +6,6 @@ let g:loaded_textimer = 1
 let s:save_cpo = &cpoptions
 set cpoptions&vim
 
-setl foldmethod=indent
 setl iskeyword=@,48-57,_,192-255,#
 
 aug textimer
@@ -24,8 +23,6 @@ nnoremap <silent> <Plug>(textimer_start) :<C-u>TextimerStart<CR>
 nnoremap <silent> <Plug>(textimer_menu)  :<C-u>TextimerMenu<CR>
 
 silent! inoremap <buffer> <S-Tab> <C-d>
-" <Nul> means Ctrl+Space in terminal
-silent! nnoremap <buffer> <Nul> za
 if !hasmapto('<Plug>(textimer_menu)')
   silent! nmap <buffer> <CR><CR> <Plug>(textimer_menu)
 endif
