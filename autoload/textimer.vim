@@ -6,7 +6,7 @@ let g:textimer#finished_exec = get(g:, 'textimer#finished_exec', '%c %s')
 let g:textimer#popup_height = get(g:, 'textimer#popup_height', 3)
 let g:textimer#popup_width = get(g:, 'textimer#popup_width', 30)
 let g:textimer#popup_borderchars = get(g:, 'textimer#popup_borderchars', ['-', '|', '-', '|', '+', '+', '+', '+'])
-let g:textimer#new_timer_minutes = get(g:, 'textimer#new_timer_minutes', [5, 15, 25])
+let g:textimer#new_timer_minutes = get(g:, 'textimer#new_timer_minutes', [25, 15, 5])
 
 function! s:border() abort
   return repeat('-', g:textimer#popup_width)
