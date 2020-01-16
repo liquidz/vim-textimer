@@ -44,6 +44,6 @@ let g:textimer#finished_exec = '%c -e ''display notification "textimer" with tit
 
 ## License
 
-Copyright (c) 2019 [Iizuka Masashi](http://twitter.com/uochan)
+Copyright (c) 2019-2020 [Iizuka Masashi](http://twitter.com/uochan)
 
 Distributed under the MIT License.
