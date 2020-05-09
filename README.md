@@ -39,7 +39,7 @@ Plug 'liquidz/vim-textimer'
      * e.g. To notify on macOS
 ```
 let g:textimer#finished_command = 'osascript'
-let g:textimer#finished_exec = '%c -e ''display notification "textimer" with title "%s"'''
+let g:textimer#finished_exec = '%c -e "display notification \"textimer\" with title \"%s\""'
 ```
 
 ## License

@@ -145,7 +145,6 @@ function! s:timer_callback(event) abort
 
     let msg = printf('Finish timer: %s', ctx.title)
     if !empty(g:textimer#finished_command)
-      "silent call system(s:construct_command(msg))
       call job_start(s:construct_command(msg))
     endif
   endif
