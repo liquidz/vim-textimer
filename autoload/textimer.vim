@@ -1,6 +1,8 @@
 let s:save_cpo = &cpoptions
 set cpoptions&vim
 
+let g:textimer#started_command = get(g:, 'textimer#started_command', '')
+let g:textimer#started_exec = get(g:, 'textimer#started_exec', '%c %s')
 let g:textimer#finished_command = get(g:, 'textimer#finished_command', '')
 let g:textimer#finished_exec = get(g:, 'textimer#finished_exec', '%c %s')
 let g:textimer#popup_height = get(g:, 'textimer#popup_height', 3)
@@ -16,9 +18,15 @@ function! s:border() abort
   return repeat('-', g:textimer#popup_width)
 endfunction
 
-function! s:construct_command(msg) abort
-  let res = g:textimer#finished_exec
-  let res = substitute(res, '%c', g:textimer#finished_command, 'g')
+function! s:construct_command(type, msg) abort
+  let exec = (a:type ==# 'finished')
+        \ ? g:textimer#finished_exec
+        \ : g:textimer#started_exec
+  let command = (a:type ==# 'finished')
+        \ ? g:textimer#finished_command
+        \ : g:textimer#started_command
+
+  let res = substitute(exec, '%c', command, 'g')
   let res = substitute(res, '%s', a:msg, 'g')
   return res
 endfunction
@@ -143,9 +151,9 @@ function! s:timer_callback(event) abort
     call textimer#done_by_id(ctx.bufnr, ctx.id)
     call popup_close(winid)
 
-    let msg = printf('Finish timer: %s', ctx.title)
     if !empty(g:textimer#finished_command)
-      call job_start(s:construct_command(msg))
+      let msg = printf('Finish timer: %s', ctx.title)
+      call job_start(s:construct_command('finished', msg))
     endif
   endif
 endfunction
@@ -201,6 +209,11 @@ function! textimer#start(line_number) abort
         \ }
   call s:timer.stop()
   call s:timer.start(sec, funcref('s:timer_callback'), context)
+
+  if !empty(g:textimer#started_command)
+    let msg = printf('Start timer: %s', res.title)
+    call job_start(s:construct_command('started', msg))
+  endif
 endfunction
 
 function! textimer#start_by_current_line() abort

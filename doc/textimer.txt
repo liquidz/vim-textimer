@@ -66,6 +66,19 @@ g:textimer#finished_exec
   `%c` is replaced by |g:textimer#finished_command|.
   `%s` is replaced by text message such as `"Finish timer: foo"` .
 
+                                                   *g:textimer#started_command*
+g:textimer#started_command
+  FIXME
+  if not empty, run the command when timer is started.
+
+                                                      *g:textimer#started_exec*
+g:textimer#started_exec
+  FIXME
+  Default value is `'%c %s'`
+
+  `%c` is replaced by |g:textimer#started_command|.
+  `%s` is replaced by text message such as `"Started timer: foo"` .
+
 ==============================================================================
 Changelog                                                  *textimer-changelog*
 

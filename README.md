@@ -33,6 +33,7 @@ Plug 'liquidz/vim-textimer'
          * depends on [updatetime](https://vim-jp.org/vimdoc-en/options.html#'updatetime') option.
        * Type `<CR><CR>` in normal mode, and open textimer menu.
        * `:TextimerStart` command.
+   * If `g:textimer#started_command` is defined, specified command will be executed.
 
  * When timer is finished, vim-textimer echos the message.
    * If `g:textimer#finished_command` is defined, specified command will be executed.
